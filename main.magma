@@ -1,0 +1,41 @@
+load "galovich-rosen.magma";
+load "honda-tate.magma";
+
+q2        := 2;
+q3        := 3;
+q5        := 5;
+q7        := 7;
+
+Polyk2<A> := PolynomialRing(FiniteField(q2));
+Polyk3<B> := PolynomialRing(FiniteField(q3));
+Polyk5<C> := PolynomialRing(FiniteField(q5));
+Polyk7<D> := PolynomialRing(FiniteField(q7));
+
+m2        := Polyk2!(A^4+A^3+A^2+A+1);
+m2a       := Polyk2!((A^2+A+3)*(A^4+A^3+A^2+A+1));
+m2b       := Polyk2!((A^3+A+1)*(A^2+A+1)*(A^4+A^3+A^2+A+1));
+m3        := Polyk3!(B^2 +1);
+m5        := Polyk5!(C^2 + 3);
+m7        := Polyk7!(D^2 + D + 3);
+
+
+PrettyPrint := function(m)
+
+
+    F          := CoefficientRing(m);
+    q          := #F;
+
+    print "q: ", q;
+    print "m: ", m;
+    print "m squarefree: ", IsSquarefree(m);
+
+    factors    := LPolynomialModGalois(m);
+
+    print "Galois decomposition of L: ", factors;
+
+    invariants := ComputeInvariants(F, factors);
+
+    print "Set of complete invariants: ", invariants;
+
+    return true;
+end function;

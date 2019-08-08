@@ -1,0 +1,33 @@
+load "helpers.magma";
+
+Z	       := Integers();
+PolyZ<t> := PolynomialRing(Z);
+
+D    := car< PolyZ, Z >; // (f_i, e_i)
+
+// facs: Factorization of the L-Function we're working with
+// F: finite field we're working over
+ComputeInvariants := function(k, facs)
+  p := Characteristic(k);
+  q := #k;
+
+  result := [];
+
+  for f in facs do
+    F<alpha>   := NumberField( f[1] ); // the number field obtained by adjoining a root of f
+    places     := Decomposition(F,p); // places of F lying above p
+
+
+    inv := fmap( func<v | Denominator((1 - Valuation(alpha, v[1]))/Valuation(q, v[1]) * LocalDegree(v[1]))>, places);
+
+    if ( #RealPlaces(F) gt 0 ) then
+      Append( ~inv, 2 );   // if there are real places we have to add a factor 2 in m - cmp. tate
+    end if;
+
+    m := LeastCommonMultiple( inv ); // m_i = [E : F_i]^(1/2) = lcm( b_v | v) <- number theory
+    Append(~result, D ! < f[1],  f[2] / m > ); // e_i = k_i / m_i;
+
+  end for;
+
+  return result;
+end function;

@@ -1,0 +1,123 @@
+fmap := function (f, xs)
+
+  ys := [];
+  for x in xs do
+   Append(~ys, f(x));
+  end for;
+
+  return ys;
+end function;
+
+
+// Given any finite Group G this function will compute the 'canonical' embedding G -> Sym(|G|) where |G| denotes the underlying set of G
+CayleyEmbedding := function (G)
+   iG   := SetToIndexedSet(Set(G));
+   S    := Sym(iG);
+   gens := [];
+
+   for g in G do
+     Append(~gens, S ! [g * h : h in iG]);
+   end for;
+
+   return sub<S|gens>;
+end function;
+
+// Given a finite field F and a natural number n, this function returns all _monic_ polynomials of degree n over F.
+AllMonicPolynomials := function (F, n)
+
+  if n eq 0 then
+    return [1];
+  end if;
+
+  monics := [];
+
+  cfs := CartesianProduct(fmap(func< x | F>, [0..n-1])); // Should be possible to do that easier.
+  P := PolynomialRing(F);
+  for cf in cfs do
+    cur := [];
+    for c in cf do
+      Append(~cur, c);
+    end for;
+    Append(~cur, 1);
+
+    Append(~monics, elt<P | cur>);
+  end for;
+
+  return monics;
+end function;
+
+// Flattens a List of Lists into one List
+FlattenList := function (xxs)
+  flat := [];
+
+  for xs in xxs do
+   flat cat:= xs;
+  end for;
+
+  return flat;
+end function;
+
+Sort := function( fs )
+  sorted := [];
+  for f in fs do
+
+    n   := Index(fmap(func< f | f[1] >, sorted), f[1]);
+
+    if n gt 0 then
+       sorted[n][2] +:= f[2];
+    else
+        Append(~sorted, f);
+    end if;
+
+  end for;
+
+ return sorted;
+end function;
+
+// Given to G-Sets X and Y this functions returns the G-Set XxY witht the diagonal action.
+// NOT NEEDED ANYMORE
+GSetProduct := function ( Xs )
+  CheckEmpty(Xs, "GSetProduct");
+
+  G       := Group(Xs[1]);
+  X       := Set(CartesianProduct(fmap(func<X | Set(X)>, Xs)));
+  XxG     := CartesianProduct(X,G);
+  action  := map<XxG -> X | x :-> tmap(func<y | y^x[2]>, x[1])>;
+
+  return GSet(G, X, action);
+end function;
+
+// NOT NEEDED RIGHT NOW
+lmap := function(f, xs)
+
+  ys := [* *];
+  for x in xs do
+    Append(~ys, f(x));
+  end for;
+
+  return ys;
+end function;
+
+// NOT NEEDED RIGHT NOW
+tmap := function(f, ts)
+
+  if #ts eq 0 then
+    return "Given tuple is empty.";
+  end if;
+
+  tup := <f(ts[1])>;
+  for i in [2..#ts] do
+    Append(~tup, f(ts[i]));
+  end for;
+
+  return tup;
+end function;
+
+// NOT NEEDED RIGHT NOW
+CheckEmpty := function (xs, msg)
+    if xs eq [] then
+      return ("[ABORT] in " * msg);
+    end if;
+
+    return "[OK] " * msg;
+end function;

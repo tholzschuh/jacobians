@@ -1,0 +1,270 @@
+load "helpers.magma";
+
+// for testing purposes only
+q        := 2;
+//q        := 3;
+//q := 5;
+//q := 7;
+Polyk<X> := PolynomialRing(FiniteField(q));
+
+test        := (X^2+X+3)*(X^4+X^3+X^2+X+1);
+//m := (X^4+X^3+X^2+X+1);
+
+//m := (X^2 +1);//*(X+1);//+ X+1;
+
+//m := X^2 + 3;
+//m := X^2 + X + 3;
+
+//facs     := fmap(func<f | f[1]>, Factorization(m));
+
+// Given an irreducible polynomial f in F[X], this function constructs the Group of Units of F[X]/(f) = F[f]^x.
+ConstructUnitGroup := function (f)
+
+  q    := #CoefficientRing(f);
+  F    := FiniteField(q);
+
+  return UnitGroup(ext<F | f>);
+
+end function;
+
+// Given a sequence of irreducible polynomials fs, this function constructs the sequence of corresponding Groups of Units
+// Note that while ConstructUnitGroup also returns inclusion mappings, this functions discards them, which is why I might want to get rid of it later
+// (or enhance my version of fmap)
+ConstructUnitGroups := function (fs)
+  return fmap (func < f | ConstructUnitGroup(f)>, fs);
+end function;
+
+
+// Given the factorization fs of m into irreducibles, this functions computes the G-Set associated to the action of Gal(Q(zeta_k)/Q) -> C^, where C^ is the character group of C.
+// As a byproduct we also return A, the group the characters are defined on, the factors Us that make up A as a direct product and the embeddings of the Us into A.
+// (We need those to later on implement the function that decides whether a character is primitive or not)
+ComputeGaloisAction  := function (fs)
+
+  q       := #CoefficientRing(fs[1]);
+
+  k       := LeastCommonMultiple(fmap ( func< f | q^(Degree(f)) - 1>, fs )); // the galois group of Q(zeta_k) naturally acts on C^
+
+  Us := ConstructUnitGroups(fs);
+  A, e, p := DirectProduct(Us); // A actually is A^x (units of the ring A=F[X]/m)
+  C       := SequenceToSet(CharacterTable(A));
+
+  absG, i := UnitGroup(ResidueClassRing(k));
+  G       := CayleyEmbedding(absG); // see helpers.magma
+  X       := GSet(G);
+
+  CxG     := CartesianProduct(C, G);
+
+  action  := map< CxG -> C | x :-> x[1]^((Integers())!i((X!0)^x[2])) >;
+  /* Explanation:
+   * x[1]: Character
+   * X!0 : Force Magma to evaluate the inner _^_ as action of a given group element on the Identity
+   * i(..): Convert the element one obtains to an actual element of Z/kZ
+   * Integers() !: Force magma to evaluate i(...) as an element of Z in order to be able to evaluate the power x[1]^...
+  */
+  return GSet(G, C, action), A, Us, e;
+
+end function;
+
+// Constructs the cyclotomic field the characters of the group of units determined by the fs will take values in.
+ConstructCyclotomicField := function (fs)
+
+  q  := #CoefficientRing(fs[1]);
+
+
+  k := LeastCommonMultiple( fmap( func<f | q^Degree(f) - 1>, fs));
+
+  return CyclotomicField(k);
+end function;
+
+// Given a character chi in C^, the factors Us of C and the corresponding embeddings U_i -> C, this function determines whether chi is a primitive character or not.
+IsPrimitive := function (chi, Us, embds)
+
+  primitive := false;
+
+  for i in [1..#Us] do
+      U := Us[i];
+      e := embds[i]; // the embedding of U into the product
+
+    for g in U do
+
+       if not(chi(e(g)) eq 1) then
+          primitive := true;
+          break;
+       end if;
+
+    end for;
+
+    if not primitive then
+       return false;
+    end if;
+
+    primitive := false;
+  end for;
+
+  return true;
+end function;
+
+// This function evaluates the character chi (defined on the product of F[X]/f_i for f_i in fs) on the polynomial f in F[X]
+// embds corresponds to the embeddings U(F[X]/f_i) -> \prod U(...)
+EvaluateCharacter := function (chi, f, fs, embds, F, Fs, phis)
+
+  if #fs eq 0 then
+    return 0;
+  end if;
+
+  evalChi := 1;
+
+  for i in [1..#fs] do
+     f_i        := fs[i];
+     d_i        := Degree(f_i);
+     F_i, _     := Fs[i];
+     phi_i      := phis[i];
+     iso        := Inverse(phi_i);
+
+     cfs        := fmap(func<cf | F!cf>, Coefficients(f mod f_i));
+
+
+     for i in [#cfs .. d_i-1] do
+       Append(~cfs, F!0);
+     end for;
+
+     elt        := Seqelt(cfs, F_i); // restclass mod f_i, already coerced into an element of F_i SEEMS TO WORK!
+
+     if elt eq 0 then
+        return 0; // If f_i divides f, f won't be a unit in the quotient, so a character evaluated on that should be 0
+     end if;
+
+     k_i       := embds[i](Eltseq(iso( elt ))[1]);
+     evalChi  *:= chi(k_i);
+  end for;
+
+  return evalChi;
+end function;
+
+
+
+// This function checks whether the character chi, defined on the product of the unit groups of F[X]/f_i for f_i in fs is always trivial when evaluated at a unit of the base field F.
+IsTrivialOnBaseField := function(chi, fs, embds, F, Fs, phis)
+
+  for a in [ x  : x in F | not(x eq 0) and not(x eq 1)] do
+    if EvaluateCharacter(chi, a, fs, embds, F, Fs, phis) eq 1 then
+      continue;
+    end if;
+    return false;
+  end for;
+
+  return true;
+end function;
+
+IsTrivialCharacter := function(chi, fs, embds, F, Fs, phis)
+
+  for x in F do
+    if not(EvaluateCharacter(chi, x, fs, embds, F, Fs, phis) eq 1) then
+       return false;
+    end if;
+  end for;
+
+  return true;
+end function;
+
+// Calculate the LPolynomial corresponding to the extension given by m
+// To reduce the amount of time and memory needed to factorize the LPolynomial later on we define a galois action on the character group and give a "partial" factorization of the LPolynomial using galois theory
+LPolynomialModGalois := function (m) // m is the given squarefree polynomial
+
+   if not( IsSquarefree(m) ) then
+     "Algorithm only works for squarefree m!";
+     return [];
+   end if;
+
+   F          := CoefficientRing(m);
+
+   //p          := Characteristic(F);
+   //q          := #F;
+   PolyF<t>         := PolynomialRing(F);
+   //PolyQ<t>   := PolynomialRing(Rationals());
+
+
+   deg              := Degree(m); // used to calculate A(n,chi)
+
+   fs               := [f[1] : f in Factorization(m)];
+   Fs               := [ext<F | f> : f in fs];
+   phis := [* *]; // Construction sux. Do sth better tmrw
+
+   for k in Fs do
+   _, p := UnitGroup(k);
+   Append(~phis, p);
+   end for;
+
+
+   K                := ConstructCyclotomicField(fs);
+
+
+   X, U, Us, embds  := ComputeGaloisAction(fs);
+
+   G                := Group(X);
+   orbits           := Orbits(G, X);
+
+   PolyK<T>         := PolynomialRing(K); // It should be possible to effectively compute the coefficients of the L-Polynomial inside this K
+   PolyZ<T>         := PolynomialRing(Integers());
+
+   factors          := [* *];
+
+   for orb in orbits do
+      if not(IsPrimitive(orb[1], Us, embds)) then // It should suffice to sort out at the level of orbits as orbits consists of either primitive characters only or non-primitive characters only
+         continue;
+      end if;
+
+
+        correction  := false;
+
+      if IsTrivialOnBaseField(orb[1], fs, embds, F, Fs, phis) then // same as with primitives
+        correction  := true;
+      end if;
+
+
+      // calculate factor of L Polynomial with respect to orb
+      fac_orb := 1;
+      fac_chi := 0;
+
+      for chi in orb do
+
+        fac_chi := 0;
+        A       := 0; //current A, depending on chi and n
+         for n in [0..deg-1] do // formular of L-Polynomial shows that one only has to consider terms with degree <= deg
+
+            for f in AllMonicPolynomials(F, n) do // see helpers.magma
+               A  +:= EvaluateCharacter(chi, f, fs, embds, F, Fs, phis);
+            end for;
+
+          fac_chi +:= (PolyK!A) * T^n; // formular for the factor
+                A  := 0;
+         end for;
+
+         // Compare e.g. with 'Shiomi, Ordinary cyclotomic function fields'
+         if correction then
+            fac_orb *:= PolyK!(fac_chi/(1-T));
+         else
+            fac_orb *:= fac_chi;
+         end if;
+      end for;
+
+      Append(~factors, PolyZ!(fac_orb));
+   end for;
+
+   return Sort(FlattenList(fmap(Factorization, factors)));
+end function;
+
+
+// This function returns the cyclotomic field extension determined by m.
+// NOT NEEDED ANYMORE
+ComputeCarlitzExtension := function (m)
+  q       := #CoefficientRing(m);
+  k<t>    := FunctionField(FiniteField(q));
+  ktau<X> := TwistedPolynomials(k);
+
+  C       := CarlitzModule(ktau, m);
+  C_m     := Polynomial(C);
+  factors := Factorization(C_m);
+
+  return FunctionField(factors[#factors][1]); // <- cmp. the description of the minimal polynomial of the carlitz extension K_m
+end function;
