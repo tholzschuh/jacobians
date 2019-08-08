@@ -27,6 +27,7 @@ PrettyPrint := function(m)
 
     print "q: ", q;
     print "m: ", m;
+    print "m irreducible: ", IsIrreducible(m);
     print "m squarefree: ", IsSquarefree(m);
 
     factors    := LPolynomialModGalois(m);
@@ -35,7 +36,7 @@ PrettyPrint := function(m)
 
     invariants := ComputeInvariants(F, factors);
 
-    print "Set of complete invariants: ", invariants;
+    print "Honda-Tate invariants: ", invariants;
 
     return true;
 end function;

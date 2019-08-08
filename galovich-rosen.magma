@@ -253,18 +253,3 @@ LPolynomialModGalois := function (m) // m is the given squarefree polynomial
 
    return Sort(FlattenList(fmap(Factorization, factors)));
 end function;
-
-
-// This function returns the cyclotomic field extension determined by m.
-// NOT NEEDED ANYMORE
-ComputeCarlitzExtension := function (m)
-  q       := #CoefficientRing(m);
-  k<t>    := FunctionField(FiniteField(q));
-  ktau<X> := TwistedPolynomials(k);
-
-  C       := CarlitzModule(ktau, m);
-  C_m     := Polynomial(C);
-  factors := Factorization(C_m);
-
-  return FunctionField(factors[#factors][1]); // <- cmp. the description of the minimal polynomial of the carlitz extension K_m
-end function;
