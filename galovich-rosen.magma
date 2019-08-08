@@ -1,22 +1,5 @@
 load "helpers.magma";
 
-// for testing purposes only
-q        := 2;
-//q        := 3;
-//q := 5;
-//q := 7;
-Polyk<X> := PolynomialRing(FiniteField(q));
-
-test        := (X^2+X+3)*(X^4+X^3+X^2+X+1);
-//m := (X^4+X^3+X^2+X+1);
-
-//m := (X^2 +1);//*(X+1);//+ X+1;
-
-//m := X^2 + 3;
-//m := X^2 + X + 3;
-
-//facs     := fmap(func<f | f[1]>, Factorization(m));
-
 // Given an irreducible polynomial f in F[X], this function constructs the Group of Units of F[X]/(f) = F[f]^x.
 ConstructUnitGroup := function (f)
 
@@ -77,6 +60,7 @@ ConstructCyclotomicField := function (fs)
 end function;
 
 // Given a character chi in C^, the factors Us of C and the corresponding embeddings U_i -> C, this function determines whether chi is a primitive character or not.
+// Note that the trivial character is not primitive according to this function, as we'd need to exclude the trivial character later anyway
 IsPrimitive := function (chi, Us, embds)
 
   primitive := false;
@@ -128,7 +112,7 @@ EvaluateCharacter := function (chi, f, fs, embds, F, Fs, phis)
        Append(~cfs, F!0);
      end for;
 
-     elt        := Seqelt(cfs, F_i); // restclass mod f_i, already coerced into an element of F_i SEEMS TO WORK!
+     elt        := Seqelt(cfs, F_i); // restclass mod f_i, already coerced into an element of F_i
 
      if elt eq 0 then
         return 0; // If f_i divides f, f won't be a unit in the quotient, so a character evaluated on that should be 0
@@ -156,17 +140,6 @@ IsTrivialOnBaseField := function(chi, fs, embds, F, Fs, phis)
   return true;
 end function;
 
-IsTrivialCharacter := function(chi, fs, embds, F, Fs, phis)
-
-  for x in F do
-    if not(EvaluateCharacter(chi, x, fs, embds, F, Fs, phis) eq 1) then
-       return false;
-    end if;
-  end for;
-
-  return true;
-end function;
-
 // Calculate the LPolynomial corresponding to the extension given by m
 // To reduce the amount of time and memory needed to factorize the LPolynomial later on we define a galois action on the character group and give a "partial" factorization of the LPolynomial using galois theory
 LPolynomialModGalois := function (m) // m is the given squarefree polynomial
@@ -178,10 +151,7 @@ LPolynomialModGalois := function (m) // m is the given squarefree polynomial
 
    F          := CoefficientRing(m);
 
-   //p          := Characteristic(F);
-   //q          := #F;
    PolyF<t>         := PolynomialRing(F);
-   //PolyQ<t>   := PolynomialRing(Rationals());
 
 
    deg              := Degree(m); // used to calculate A(n,chi)

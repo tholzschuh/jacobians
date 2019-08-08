@@ -1,3 +1,4 @@
+// Utility function that applies the function f to all the elements x of xs
 fmap := function (f, xs)
 
   ys := [];

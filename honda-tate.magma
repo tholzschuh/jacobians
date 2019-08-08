@@ -3,7 +3,7 @@ load "helpers.magma";
 Z	       := Integers();
 PolyZ<t> := PolynomialRing(Z);
 
-D    := car< PolyZ, Z >; // (f_i, e_i)
+D    := car< PolyZ, Z >; // (f_i, e_i) compare Tate
 
 // facs: Factorization of the L-Function we're working with
 // F: finite field we're working over
@@ -24,7 +24,7 @@ ComputeInvariants := function(k, facs)
       Append( ~inv, 2 );   // if there are real places we have to add a factor 2 in m - cmp. tate
     end if;
 
-    m := LeastCommonMultiple( inv ); // m_i = [E : F_i]^(1/2) = lcm( b_v | v) <- number theory
+    m := LeastCommonMultiple( inv ); // m_i = [E : F_i]^(1/2) = lcm( b_v | v) 
     Append(~result, D ! < f[1],  f[2] / m > ); // e_i = k_i / m_i;
 
   end for;
